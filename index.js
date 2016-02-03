@@ -4,7 +4,7 @@ const Hapi = require('hapi');
 const async = require('async');
 const config = require(__dirname + '/config.js');
 const r = require('rethinkdb');
-const _ = require('lodash');
+const Event = require(__dirname + '/models/event.js');
 
 const server = new Hapi.Server();
 
@@ -21,30 +21,12 @@ server.route({
     method: 'POST',
     path: '/event',
     handler: function (request, reply) {
-        var event = {
-            location: r.point(request.payload.lng, request.payload.lat),
-            createdAt: r.now()
+        var obj = Event.fromPayload(request.payload);
 
-        };
-
-        _.forIn(request.payload, function (value, key) {
-            switch(key) {
-                case 'lng':
-                case 'lat':
-                    break;
-                case 'when':
-                    event[key] = r.epochTime(value);
-                    break;
-                default:
-                    event[key] = value;
-            }
-        });
-
-        console.dir(event);
-
-        r.table(config.models.event.table_name).insert(event, {returnChanges: true}).run(server._rdbConnection, function (err, result) {
+        r.table(config.models.event.table_name).insert(obj, {returnChanges: true}).run(server._rdbConnection, function (err, result) {
             if (err) throw err;
-            reply(result);
+
+            reply(result.changes[0].new_val);
 
         });
     }
@@ -54,10 +36,12 @@ server.route({
     method: 'GET',
     path: '/event',
     handler: function (request, reply) {
+        console.log(request.query);
+
         r.table(config.models.event.table_name).run(server._rdbConnection, function (err, cursor) {
             if (err) throw err;
 
-            cursor.toArray(function(err, result) {
+            cursor.toArray(function (err, result) {
                 if (err) throw err;
                 reply(result);
             });
