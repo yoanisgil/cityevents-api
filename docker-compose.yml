@@ -1,0 +1,8 @@
+db:
+    image: rethinkdb:2
+    volumes:
+        - ./data:/data
+    ports:
+        - "28015:28015/tcp"
+        - "29015:29015/tcp"
+        - "8080:8080/tcp"
