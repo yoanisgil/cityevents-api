@@ -24,11 +24,19 @@ server.route({
         var event = {
             location: r.point(request.payload.lng, request.payload.lat),
             createdAt: r.now()
+
         };
 
         _.forIn(request.payload, function (value, key) {
-            if (key != 'lng' && key != 'lat') {
-                event[key] = value;
+            switch(key) {
+                case 'lng':
+                case 'lat':
+                    break;
+                case 'when':
+                    event[key] = r.epochTime(value);
+                    break;
+                default:
+                    event[key] = value;
             }
         });
 
