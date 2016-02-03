@@ -3,6 +3,7 @@
 const Hapi = require('hapi');
 const async = require('async');
 const config = require(__dirname + '/config.js');
+const _ = require('lodash');
 const r = require('rethinkdb');
 const Event = require(__dirname + '/models/event.js');
 
@@ -23,12 +24,14 @@ server.route({
     handler: function (request, reply) {
         var obj = Event.fromPayload(request.payload);
 
-        r.table(config.models.event.table_name).insert(obj, {returnChanges: true}).run(server._rdbConnection, function (err, result) {
-            if (err) throw err;
+        r.table(config.models.event.table_name).insert(obj, {returnChanges: true}).
+            run(server._rdbConnection).
+            then(function (result) {
+                reply(result.changes[0].new_val);
 
-            reply(result.changes[0].new_val);
-
-        });
+            }).error(function(error){
+                reply({message: error.message}).code(500);
+            });
     }
 });
 
@@ -36,17 +39,23 @@ server.route({
     method: 'GET',
     path: '/event',
     handler: function (request, reply) {
-        console.log(request.query);
+        // TODO: Validate request query parameters
 
-        r.table(config.models.event.table_name).run(server._rdbConnection, function (err, cursor) {
-            if (err) throw err;
+        var near = request.query.near || '-73.567256,45.501689'; // Defaults to Montreal if no point provided
+        var radius = parseFloat(request.query.radius || '50');
 
-            cursor.toArray(function (err, result) {
-                if (err) throw err;
-                reply(result);
-            });
-
+        near = _.map(near.replace(/ /g, '').split(','), function (value) {
+            return parseFloat(value)
         });
+
+        r.table('events').getIntersecting(
+            r.circle(near, radius, {unit: 'mi'}), {index: 'location'})
+            .run(server._rdbConnection)
+            .then(function (result) {
+                reply(result.toArray());
+            }).error(function (error) {
+                reply({message: error.message}).code(500);
+            });
     }
 });
 
@@ -83,21 +92,39 @@ async.waterfall([
                 callback(err, connection);
             });
         },
-        function createIndex(connection, callback) {
+        function whenIndex(connection, callback) {
             //Create the index if needed.
-            r.table(config.models.event.table_name).indexList().contains('createdAt').do(function (hasIndex) {
+            r.table(config.models.event.table_name).indexList().contains('when').do(function (hasIndex) {
                 return r.branch(
                     hasIndex,
                     {created: 0},
-                    r.table(config.models.event.table_name).indexCreate('createdAt')
+                    r.table(config.models.event.table_name).indexCreate('when')
                 );
             }).run(connection, function (err) {
                 callback(err, connection);
             });
         },
-        function waitForIndex(connection, callback) {
+        function waitForWhenIndex(connection, callback) {
             //Wait for the index to be ready.
-            r.table(config.models.event.table_name).indexWait('createdAt').run(connection, function (err, result) {
+            r.table(config.models.event.table_name).indexWait('when').run(connection, function (err, result) {
+                callback(err, connection);
+            });
+        },
+        function locationIndex(connection, callback) {
+            //Create the index if needed.
+            r.table(config.models.event.table_name).indexList().contains('location').do(function (hasIndex) {
+                return r.branch(
+                    hasIndex,
+                    {created: 0},
+                    r.table(config.models.event.table_name).indexCreate('location', {geo: true})
+                );
+            }).run(connection, function (err) {
+                callback(err, connection);
+            });
+        },
+        function waitForLocationIndex(connection, callback) {
+            //Wait for the index to be ready.
+            r.table(config.models.event.table_name).indexWait('location').run(connection, function (err, result) {
                 callback(err, connection);
             });
         }],
