@@ -10,5 +10,8 @@ module.exports = {
     },
     socket: {
         port: process.env.WEBSOCKET_PORT || 3001
+    },
+    jwt: {
+        secret: process.env.JWT_SECRET || 'changeme'
     }
 };

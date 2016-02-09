@@ -17,7 +17,7 @@ exports.register = function (server, options, next) {
                 var data = User.fromPayload(request.payload);
 
                 r.table(User.TABLE_NAME).
-                    filter(r.row('email').eq(data.email)).count().gt(1).
+                    filter(r.row('email').eq(data.email)).count().gt(0).
                     run(connection).
                     then(function (result) {
                         if (result) {

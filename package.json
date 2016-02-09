@@ -10,7 +10,9 @@
   "license": "ISC",
   "dependencies": {
     "async": "^1.5.2",
+    "fb": "^1.0.2",
     "hapi": "^13.0.0",
+    "jsonwebtoken": "^5.5.4",
     "lodash": "^4.2.0",
     "rethinkdb": "^2.2.1",
     "socket.io": "^1.4.5"

@@ -121,6 +121,10 @@ async.waterfall([
                 {
                     register: require('./routes/user'),
                     options: {connection: connection}
+                },
+                {
+                    register: require('./routes/auth'),
+                    options: {connection: connection}
                 }
             ],
             function (err) {
