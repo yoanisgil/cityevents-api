@@ -2,8 +2,10 @@
 
 const Hapi = require('hapi');
 const async = require('async');
-const config = require(__dirname + '/config.js');
+const config = require(__dirname + '/config');
 const r = require('rethinkdb');
+const Event = require(__dirname + '/models/event');
+const User = require(__dirname + '/models/user');
 
 const server = new Hapi.Server();
 
@@ -38,13 +40,26 @@ async.waterfall([
                 callback(err, connection);
             });
         },
-        function createTable(connection, callback) {
+        //TODO: Need to automate this
+        function createUserTable(connection, callback) {
             //Create the table if needed.
-            r.tableList().contains(config.models.event.table_name).do(function (containsTable) {
+            r.tableList().contains(User.TABLE_NAME).do(function (containsTable) {
                 return r.branch(
                     containsTable,
                     {created: 0},
-                    r.tableCreate(config.models.event.table_name)
+                    r.tableCreate(User.TABLE_NAME)
+                );
+            }).run(connection, function (err) {
+                callback(err, connection);
+            });
+        },
+        function createEventTable(connection, callback) {
+            //Create the table if needed.
+            r.tableList().contains(Event.TABLE_NAME).do(function (containsTable) {
+                return r.branch(
+                    containsTable,
+                    {created: 0},
+                    r.tableCreate(Event.TABLE_NAME)
                 );
             }).run(connection, function (err) {
                 callback(err, connection);
@@ -52,11 +67,11 @@ async.waterfall([
         },
         function whenIndex(connection, callback) {
             //Create the index if needed.
-            r.table(config.models.event.table_name).indexList().contains('when').do(function (hasIndex) {
+            r.table(Event.TABLE_NAME).indexList().contains('when').do(function (hasIndex) {
                 return r.branch(
                     hasIndex,
                     {created: 0},
-                    r.table(config.models.event.table_name).indexCreate('when')
+                    r.table(Event.TABLE_NAME).indexCreate('when')
                 );
             }).run(connection, function (err) {
                 callback(err, connection);
@@ -64,17 +79,17 @@ async.waterfall([
         },
         function waitForWhenIndex(connection, callback) {
             //Wait for the index to be ready.
-            r.table(config.models.event.table_name).indexWait('when').run(connection, function (err, result) {
+            r.table(Event.TABLE_NAME).indexWait('when').run(connection, function (err, result) {
                 callback(err, connection);
             });
         },
         function locationIndex(connection, callback) {
             //Create the index if needed.
-            r.table(config.models.event.table_name).indexList().contains('location').do(function (hasIndex) {
+            r.table(Event.TABLE_NAME).indexList().contains('location').do(function (hasIndex) {
                 return r.branch(
                     hasIndex,
                     {created: 0},
-                    r.table(config.models.event.table_name).indexCreate('location', {geo: true})
+                    r.table(Event.TABLE_NAME).indexCreate('location', {geo: true})
                 );
             }).run(connection, function (err) {
                 callback(err, connection);
@@ -82,7 +97,7 @@ async.waterfall([
         },
         function waitForLocationIndex(connection, callback) {
             //Wait for the index to be ready.
-            r.table(config.models.event.table_name).indexWait('location').run(connection, function (err, result) {
+            r.table(Event.TABLE_NAME).indexWait('location').run(connection, function (err, result) {
                 callback(err, connection);
             });
         }],
@@ -101,6 +116,10 @@ async.waterfall([
                 },
                 {
                     register: require('./routes/event'),
+                    options: {connection: connection}
+                },
+                {
+                    register: require('./routes/user'),
                     options: {connection: connection}
                 }
             ],

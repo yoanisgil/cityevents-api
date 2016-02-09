@@ -3,9 +3,8 @@
  */
 
 const r = require('rethinkdb');
-const config = require('../config');
 const _ = require('lodash');
-const Event = require('../models/event');
+const User = require('../models/user');
 
 exports.register = function (server, options, next) {
     var connection = options.connection;
@@ -13,11 +12,12 @@ exports.register = function (server, options, next) {
     var routes = [
         {
             method: 'POST',
-            path: '/event',
+            path: '/user',
             handler: function (request, reply) {
-                var obj = Event.fromPayload(request.payload);
+                console.log(request.payload);
+                var data = User.fromPayload(request.payload);
 
-                r.table(config.models.event.table_name).insert(obj, {returnChanges: true}).
+                r.table(User.TABLE_NAME).insert(data, {returnChanges: true}).
                     run(connection).
                     then(function (result) {
                         reply(result.changes[0].new_val);
@@ -29,20 +29,10 @@ exports.register = function (server, options, next) {
         },
         {
             method: 'GET',
-            path: '/event',
+            path: '/user',
             handler: function (request, reply) {
-                // TODO: Validate request query parameters
-
-                var near = request.query.near || '-73.567256,45.501689'; // Defaults to Montreal if no point provided
-                var radius = parseFloat(request.query.radius || '50');
-
-                near = _.map(near.replace(/ /g, '').split(','), function (value) {
-                    return parseFloat(value)
-                });
-
-                r.table(Event.TABLE_NAME).getIntersecting(
-                    r.circle(near, radius, {unit: 'mi'}), {index: 'location'})
-                    .run(connection)
+                //TODO: This needs to be protected
+                r.table(User.TABLE_NAME).run(connection)
                     .then(function (result) {
                         reply(result.toArray());
                     }).error(function (error) {
@@ -58,6 +48,6 @@ exports.register = function (server, options, next) {
 };
 
 exports.register.attributes = {
-    name: 'event',
+    name: 'user',
     version: '1.0.0'
 };

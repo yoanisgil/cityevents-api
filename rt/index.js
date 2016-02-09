@@ -2,12 +2,13 @@
 
 const config = require('../config');
 const r = require('rethinkdb');
+const Event = require('../models/event');
 
 exports.register = function (server, options, next) {
     var io = require('socket.io')(server.select('rt').listener);
 
     io.on('connection', function (socket) {
-        r.table(config.models.event.table_name).changes().run(options.connection, function (err, cursor) {
+        r.table(Event.TABLE_NAME).changes().run(options.connection, function (err, cursor) {
             if (err) throw err;
             cursor.each(function (err, row) {
                 if (err) throw err;

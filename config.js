@@ -5,11 +5,6 @@ module.exports = {
         authKey: '',
         db: process.env.RETHINK_DB_DBNAME || 'cityevents',
     },
-    models: {
-      event: {
-        table_name: 'events'
-      }
-    },
     express: {
         port: process.env.EXPRESS_PORT || 3000
     },

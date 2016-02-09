@@ -1,5 +1,5 @@
 /**
- * Created by brujitos on 16-02-03.
+ * Created by Yoanis Gil on 16-02-03.
  */
 
 const r = require('rethinkdb');
@@ -31,5 +31,7 @@ Event.fromPayload = function (payload) {
 
     return event;
 };
+
+Event.TABLE_NAME = 'cityevents_event';
 
 module.exports = Event;
