@@ -3,7 +3,6 @@
  */
 
 const r = require('rethinkdb');
-const config = require('../config');
 const _ = require('lodash');
 const Event = require('../models/event');
 
