@@ -17,7 +17,7 @@ exports.register = function (server, options, next) {
             handler: function (request, reply) {
                 var obj = Event.fromPayload(request.payload);
 
-                r.table(config.models.event.table_name).insert(obj, {returnChanges: true}).
+                r.table(Event.TABLE_NAME).insert(obj, {returnChanges: true}).
                     run(connection).
                     then(function (result) {
                         reply(result.changes[0].new_val);
